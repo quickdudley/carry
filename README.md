@@ -12,8 +12,8 @@ syntax.
  * /runtime will contain runtime libraries for various targets. Most will be
 written in C, but some backends may require other languages.
 
- * /libs will contain the base library (including the Prelude module) and
-closely related libraries
+ * /libs will contain the base library (including the Prelude module), libraries
+closely related to the base library, and any library used by the comiler.
 
  * /snippets will contain short carry programs for testing the interpreter and
 compiler.

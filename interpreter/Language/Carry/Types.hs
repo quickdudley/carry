@@ -7,10 +7,7 @@ import Data.Text
 import Data.List
 
 import Language.Carry.Name
-
-data Type = TyLambda [Name] [TyConstraint] Type | TyCon Name [Type]
-
-data TyConstraint = TyConstraint Name [Type]
+import Language.Carry.M
 
 applyTypeArguments :: Type -> [Type] -> Type
 applyTypeArguments t [] = t
