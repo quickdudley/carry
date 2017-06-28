@@ -1,3 +1,12 @@
+{-|
+Module:     Language.Carry.M
+Copyright:  Jeremy List
+License:    BSD-3
+Maintainer: quick.dudley@gmail.com
+
+Types representing the initially parsed AST and a monad for transforming it
+in preparation for the next stage
+-}
 module Language.Carry.M (
   Name(..),
   Type(..),
@@ -38,7 +47,18 @@ data Expression =
   CaseExpression SourceRegion
     Expression [([Pattern],Maybe Expression, Expression)] |
   LetExpression SourceRegion [Declaration] Expression |
-  IfExpression SourceRegion Expression Expression Expression
+  IfExpression SourceRegion Expression Expression Expression |
+  DoExpression SourceRegion [DoStatement]
+
+data DoStatement =
+  DoBind SourceRegion Pattern Expression |
+  DoAction SourceRegion Expression |
+  DoLet SourceRegion [Declaration]
 
 data Declaration =
-  NormalDeclaration SourceRegion Pattern
+  NormalDeclaration SourceRegion Pattern (Maybe Expression) Expression |
+  FixityDeclaration SourceRegion [Name] ADirection |
+  ClassDeclaration SourceRegion [TyConstraint] Name [Name] [ClassMember]
+
+data ClassMember =
+  ClassFunction Name Type
