@@ -10,7 +10,14 @@ in preparation for the next stage
 module Language.Carry.M (
   Name(..),
   Type(..),
-  TyConstraint(..)
+  TyConstraint(..),
+  Pattern(..),
+  Literal(..),
+  Expression(..),
+  DoStatement(..),
+  ADirection(..),
+  Declaration(..),
+  ClassMember(..)
  ) where
 
 import Data.Text
@@ -43,7 +50,7 @@ data Expression =
   LiteralExpression SourceRegion Literal |
   ConstructorExpression SourceRegion Name |
   AppliedExpression SourceRegion Expression Expression |
-  LambdaExpression SourceRegion Pattern Expression
+  LambdaExpression SourceRegion Pattern Expression |
   CaseExpression SourceRegion
     Expression [([Pattern],Maybe Expression, Expression)] |
   LetExpression SourceRegion [Declaration] Expression |
@@ -54,6 +61,8 @@ data DoStatement =
   DoBind SourceRegion Pattern Expression |
   DoAction SourceRegion Expression |
   DoLet SourceRegion [Declaration]
+
+data ADirection = FixL | FixR deriving (Eq,Ord)
 
 data Declaration =
   NormalDeclaration SourceRegion Pattern (Maybe Expression) Expression |
