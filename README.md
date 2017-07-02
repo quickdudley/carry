@@ -21,7 +21,9 @@ compiler.
  * [/snippets/fail](snippets/fail) will contain short carry programs containing deliberate errors
 which the interpreter and compiler should both reject.
 
- * [/test](/test) will contain unit tests and quickcheck tests for all components.
+ * [/test](test) will contain unit tests and quickcheck tests for all components.
+ 
+ * [/design](design) will contain notes and documents on the design of the Carry language
 
 ## Notable Differences from Haskell (assuming GHC)
 
