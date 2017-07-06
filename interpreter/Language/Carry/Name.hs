@@ -5,4 +5,5 @@ module Language.Carry.Name (
 
 import Data.Text
 
-data Name = LocalName Text | GlobalName [Text] Text deriving (Eq,Ord,Show)
+data Name = LocalName Text | UnresolvedName Text |
+  GlobalName [Text] Text deriving (Eq,Ord,Show)

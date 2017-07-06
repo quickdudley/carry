@@ -22,7 +22,8 @@ executable carryi
   build-depends:       base,
     containers,
     text,
-    phaser >= 1.0.0.1
+    phaser >= 1.0.0.1,
+    phaser-indent
   default-language:    Haskell2010
 
 test-suite carry-test

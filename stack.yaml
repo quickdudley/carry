@@ -39,7 +39,11 @@ packages:
 - '.'
 - location:
    git: https://github.com/quickdudley/phaser.git
-   commit: 31600ffafb23e3ac74001ea042974d9318d38903
+   commit: c28cb47cb64f74d5f8b4af3e284b08d8add6e77b
+  extra-dep: true
+- location:
+   git: https://github.com/quickdudley/phaser-indent.git
+   commit: 16a2f1632e9ad5be0400bf600e31a19de00ff1d8
   extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)

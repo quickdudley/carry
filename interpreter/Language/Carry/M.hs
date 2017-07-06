@@ -16,8 +16,7 @@ module Language.Carry.M (
   Expression(..),
   DoStatement(..),
   ADirection(..),
-  Declaration(..),
-  ClassMember(..)
+  Declaration(..)
  ) where
 
 import Data.Text
@@ -67,7 +66,4 @@ data ADirection = FixL | FixR deriving (Eq,Ord)
 data Declaration =
   NormalDeclaration SourceRegion Pattern (Maybe Expression) Expression |
   FixityDeclaration SourceRegion [Name] ADirection |
-  ClassDeclaration SourceRegion [TyConstraint] Name [Name] [ClassMember]
-
-data ClassMember =
-  ClassFunction Name Type
+  ClassDeclaration SourceRegion [TyConstraint] Name [Name] [Declaration]
