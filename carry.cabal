@@ -22,6 +22,7 @@ executable carryi
   build-depends:       base,
     containers,
     text,
+    lens,
     phaser >= 1.0.0.1,
     phaser-indent
   default-language:    Haskell2010
