@@ -9,6 +9,7 @@ in preparation for the next stage
 -}
 module Language.Carry.M (
   Name(..),
+  SourceRegion(..),
   Type(..),
   TyConstraint(..),
   Pattern(..),

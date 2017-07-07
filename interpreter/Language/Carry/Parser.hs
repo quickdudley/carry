@@ -1,4 +1,4 @@
-{-# LANGUAGE ApplicativeDo,RankNTypes,ImpredicativeTypes #-}
+{-# LANGUAGE ApplicativeDo,RankNTypes,OverloadedStrings #-}
 -- Phaser runs faster with ApplicativeDo (or manually using "<*>" and friends)
 module Language.Carry.Parser (
   moduleName
@@ -77,7 +77,7 @@ newBlock = blockWith $ do
   let
     loop :: IndentPhase (Phase Position Char Void ())
     loop = do
-      r <- liftPhase $ ci *> munch isILS
+      r <- liftPhase $ ci *> munch1 isILS
       e <- liftPhase get
       case e of
         '\n' -> loop
@@ -94,11 +94,39 @@ infixl 4 <*|>
 (<*|>) :: IndentPhase (a -> b) -> IndentPhase a -> IndentPhase b
 a <*|> b = a <*> newBlock b
 
-{-
-type_p :: Phase Position Char o () -> Phase Position Char o Type
-type_p indent = do
-  bp <- getPosition
-  c1 <- get
-  case c1 of
-    '\\' -> do
--}
+infixl 1 >>|=
+(>>|=) :: IndentPhase a -> (a -> IndentPhase b) -> IndentPhase b
+a >>|= f = a >>= (newBlock <$> f)
+
+infixl 1 >>|
+(>>|) :: IndentPhase a -> IndentPhase b -> IndentPhase b
+a >>| b = a *> newBlock b
+
+infixl 4 <*|
+(<*|) :: IndentPhase a -> IndentPhase b -> IndentPhase a
+a <*| b = a <* newBlock b
+
+-- Reimplement sepBy because different type
+isb :: IndentPhase a -> IndentPhase b -> IndentPhase [a]
+isb a s = isb1 a s <|> pure []
+
+isb1 :: IndentPhase a -> IndentPhase b -> IndentPhase [a]
+isb1 a s = (:) <$> a <*> many (s *> a)
+
+type_p :: IndentPhase Type
+type_p = do
+  b <- liftPhase getCount
+  let
+    ty = liftPhase (char '\\') >>| do
+      p <- isb (liftPhase name) space
+      return () <|> space -- 'space' will run twice at once :(
+      s <- liftPhase get
+      case s of
+        '.' -> innerType p [] -- sacrifice <*> to lord slowpoke
+        '|' -> fail "Unimplemented: type constraint parser"
+        _ -> fail "List of type variables must end in '|' or '.'"
+    innerType p c = do
+      i <- type_p
+      e <- liftPhase getCount
+      return (TyLambda (SourceRegion "" b e) p c i)
+  ty
