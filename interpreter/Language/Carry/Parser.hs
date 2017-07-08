@@ -71,6 +71,13 @@ name = do
 
 isILS = (&&) <$> isSpace <*> (/='\n')
 
+-- The unusual block indentation rule:
+--
+-- Since no-one agrees on how many spaces make up a tab: I'm not delimiting
+-- blocks by counting the amount of white space. Instead: the whitespace before
+-- each line must be the same sequence of whitespace characters as for other
+-- lines in the same block. I feel it's the only way to be consistent, even
+-- though some editors will require configuration.
 newBlock :: IndentPhase a -> IndentPhase a
 newBlock = blockWith $ do
   ci <- currentIndent
