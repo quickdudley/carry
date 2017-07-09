@@ -50,4 +50,40 @@ in GHC.
 
 ### Generalizing to all types
 
-To be continued
+```carry
+data Example6 a b = Example6 (a -> b)
+
+example7 :: Example6 (forall a . a -> Int) Int
+example8 :: forall a . Example6 (a -> Int) Int
+```
+
+The observations regarding examples 1 to 3 also tell us that `example7` and
+`example8` are distinct types. Examples 1 to 8 are sufficient to deduce a type
+checking algorithm which safely implements forall floating.
+
+### Solution
+
+Carry will implement an extension to the kind system. As per Haskell: the kind
+of a type with no type arguments will be `*`. Items on the left of kind
+application arrows will be annotated to indicate how type variable
+quantification can be safely moved. Programmers creating type constructors
+will be able to directly annotate the kind, provided the manual annotation does
+not allow any operation which would otherwise be forbidden.
+
+The annotations will be single characters before the item they are annotating.
+
+ * `|`: Type variable introductions may move in any direction
+
+ * `-`: Type variable introductions may not move in any direction
+
+ * `^`: Type variable introductions may only move outwards
+
+ * `!`: Type variable introductions may only move inwards (this will not occur
+    in programs with no annotated kinds)
+
+```carry
+-- Example annotated kinds
+(->) :: -* -> |* -> *
+Example7 :: -* -> |* -> *
+Maybe :: ^* -> *
+```
