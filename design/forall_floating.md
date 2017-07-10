@@ -79,11 +79,11 @@ The annotations will be single characters before the item they are annotating.
  * `^`: Type variable introductions may only move outwards
 
  * `!`: Type variable introductions may only move inwards (this will not occur
-    in programs with no annotated kinds)
+    in programs with no programmer annotated kinds)
 
 ```carry
 -- Example annotated kinds
 (->) :: -* -> |* -> *
-Example7 :: -* -> |* -> *
+Example7 :: -* -> ^* -> *
 Maybe :: ^* -> *
 ```
