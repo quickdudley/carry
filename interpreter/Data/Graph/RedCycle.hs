@@ -36,14 +36,15 @@ hasRedCycles  g = runST $ do
       [b1,_,_,t1] = sort [b0,f,s,t0]
       in b1 `seq` t1 `seq` (b1,t1)
      ) (let ((i0,j0,_):_) = g; [b0,t0] = sort [i0,j0] in (b0,t0)) g
-  remainingEdges <- newSTRef g
+  red <- newArray (b,t) [] :: ST s (STArray s Int [Int])
   arr <- newArray (b,t) [] :: ST s (STArray s Int [Int])
   stk <- newArray (b,t) False :: ST s (STUArray s Int Bool)
   s <- newSTRef [] :: ST s (STRef s [Int])
   idxs <- newArray (b,t) Nothing :: ST s (STArray s Int (Maybe Int))
   idx <- newSTRef 0 :: ST s (STRef s Int)
   lowlink <- newArray (b,t) maxBound :: ST s (STUArray s Int Int)
-  forM_ g $ \(s,t,_) -> readArray arr s >>= writeArray arr s . (t:)
+  forM_ g $ \(s,t,c) -> (readArray arr s >>= writeArray arr s . (t:)) >>
+    when (c == Red) (readArray red s >>= writeArray red s . (t:))
   let
     setLink v w = lift $ do
       vl <- readArray lowlink v
@@ -69,6 +70,7 @@ hasRedCycles  g = runST $ do
       vl <- lift $ readArray lowlink v
       when (i' == vl) $ do
         cc <- lift (newArray (b,t) False :: ST s (STUArray s Int Bool))
+        cl <- lift (newSTRef [] :: ST s (STRef s [Int]))
         let
           poploop = do
             s' <- readSTRef s
@@ -77,19 +79,16 @@ hasRedCycles  g = runST $ do
                 writeSTRef s r
                 writeArray stk w False
                 writeArray cc w True
+                modifySTRef cl (w:)
                 when (w /= v) poploop
               _ -> return ()
         lift $ poploop
-        cre <- lift $ readSTRef remainingEdges <*
-          writeSTRef remainingEdges []
-        forM_ cre $ \e@(ns,nt,c) -> do
-          cs <- lift $ (,) <$> readArray cc ns <*> readArray cc nt
-          case cs of
-            (True,True) -> case c of
-              Red -> ContT $ const $ return True
-              Black -> return ()
-            (False,False) -> lift $ modifySTRef remainingEdges (e:)
-            _ -> return ()
+        lift (readSTRef cl) >>= mapM_ (\w ->
+          lift (readArray red w) >>= mapM_ (\w' -> do
+            scc <- lift $ readArray cc w'
+            when scc $ ContT $ const $ return True
+           )
+         )
   runContT (forM_ [b .. t] strongConnect) (const $ return False)
 
 renumberNodes :: [(Int,Int,EdgeColour)] -> [(Int,Int,EdgeColour)]
