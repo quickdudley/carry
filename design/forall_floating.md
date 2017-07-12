@@ -61,7 +61,21 @@ The observations regarding examples 1 to 3 also tell us that `example7` and
 `example8` are distinct types. Examples 1 to 8 are sufficient to deduce a type
 checking algorithm which safely implements forall floating.
 
-### Solution
+### Rules
+
+ * If a type parameter is applied on the left hand side of a function arrow,
+  its introduction cannot be moved inwards or outwards
+
+ * If a type parameter is applied to a constructor which is not a newtype
+  constructor, its introduction cannot be moved inwards
+
+ * If a type parameter is used in multiple ways, the restrictions for each use
+  must all apply.
+
+ * A type variable introduction may never be moved in such a way that it is
+  referred to while out of scope.
+
+### Implementation
 
 Carry will implement an extension to the kind system. As per Haskell: the kind
 of a type with no type arguments will be `*`. Items on the left of kind
