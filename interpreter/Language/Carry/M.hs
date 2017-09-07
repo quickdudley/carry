@@ -168,12 +168,14 @@ data ADirection = FixL | FixR deriving (Eq,Ord)
 
 data Declaration =
   NormalDeclaration SourceRegion Pattern (Maybe Expression) Expression |
+  InitBind SourceRegion Pattern Expression |
   FixityDeclaration SourceRegion [Name] ADirection |
   ClassDeclaration SourceRegion [TyConstraint] Name [Name] [Declaration]
 
 instance HasRegion Declaration where
   sourceRegion f (NormalDeclaration r p g e) =
     (\r' -> NormalDeclaration r' p g e) <$> f r
+  sourceRegion f (InitBind r p e) = (\r' -> InitBind r' p e) <$> f r
   sourceRegion f (FixityDeclaration r n d) =
     (\r' -> FixityDeclaration r' n d) <$> f r
   sourceRegion f (ClassDeclaration r c n p m) =
@@ -182,6 +184,10 @@ instance HasRegion Declaration where
     f r <*>
     allSourceRegions f p <*>
     for g (allSourceRegions f) <*>
+    allSourceRegions f e
+  allSourceRegions f (InitBind r p e) = InitBind <$>
+    f r <*>
+    allSourceRegions f p <*>
     allSourceRegions f e
   allSourceRegions f d@(FixityDeclaration _ _ _) = sourceRegion f d
   allSourceRegions f (ClassDeclaration r c n p m) =
