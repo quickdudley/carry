@@ -110,9 +110,12 @@ The annotations will be single characters before the item they are annotating.
 
  * `!`: Type variable introductions may only move inwards
 
+ * `&`: The permitted movements of type variable introductions within this
+  type argument are reversed.
+
 ```carry
 -- Example annotated kinds
-(->) :: -* -> |* -> *
+(->) :: &-* -> |* -> *
 Example7 :: -* -> ^* -> *
 Maybe :: ^* -> *
 ```
