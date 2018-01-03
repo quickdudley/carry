@@ -48,17 +48,30 @@ for Carry, but it will likely require the type inference engine and type
 checker to be significantly different in implementation from their counterparts
 in GHC.
 
+### The left hand side of function arrows
+
+```carry
+example6 :: Maybe (\a | Monoid a . a) -> Integer
+example7 :: (\a | Monoid a . Maybe a) -> Integer
+```
+
+A function with the type of `example7` can take an argument of either type
+`(\a | Monoid a. Maybe a)` or `Maybe (\a | Monoid a . a)`. But a function with
+the type of `example6` can only take arguments of type `Maybe (\a . a)`. That's
+to say a value with the type of `example7` can be used as a value with the type
+of `example6` but not vice-vesa.
+
 ### Generalizing to all types
 
 ```carry
-data Example6 a b = Example6 (a -> b)
+data Example8 a b = Example6 (a -> b)
 
-example7 :: Example6 (forall a . a -> Int) Int
-example8 :: forall a . Example6 (a -> Int) Int
+example9 :: Example6 (forall a . a -> Int) Int
+example10 :: forall a . Example6 (a -> Int) Int
 ```
 
-The observations regarding examples 1 to 3 also tell us that `example7` and
-`example8` are distinct types. Examples 1 to 8 are sufficient to deduce a type
+The observations regarding examples 1 to 3 also tell us that `example9` and
+`example10` are distinct types. Examples 1 to 10 are sufficient to deduce a type
 checking algorithm which safely implements forall floating.
 
 ### Rules
@@ -74,6 +87,9 @@ checking algorithm which safely implements forall floating.
 
  * A type variable introduction may never be moved in such a way that it is
   referred to while out of scope.
+
+ * If a complex type appears on the left hand of a function arrow: the
+  directions in which type parameter introductions can be moved are reversed.
 
 ### Implementation
 
@@ -92,8 +108,7 @@ The annotations will be single characters before the item they are annotating.
 
  * `^`: Type variable introductions may only move outwards
 
- * `!`: Type variable introductions may only move inwards (this will not occur
-    in programs with no programmer annotated kinds)
+ * `!`: Type variable introductions may only move inwards
 
 ```carry
 -- Example annotated kinds
