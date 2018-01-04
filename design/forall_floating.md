@@ -111,7 +111,14 @@ The annotations will be single characters before the item they are annotating.
  * `!`: Type variable introductions may only move inwards
 
  * `&`: The permitted movements of type variable introductions within this
-  type argument are reversed.
+  type argument are reversed (for example: when the type argument is the type
+  of a function argument).
+
+ * `#`: Type variable introductions within this type argument cannot be moved
+  (such as `newtype Endo a = Endo (a -> a)` where `Endo :: #* -> *`)
+
+ * `$`: The permitted movements of type variable introductions within this type
+  argument are unmodified.
 
 ```carry
 -- Example annotated kinds
@@ -119,3 +126,32 @@ The annotations will be single characters before the item they are annotating.
 Example7 :: -* -> ^* -> *
 Maybe :: ^* -> *
 ```
+
+### Complex Kinds
+
+For more complex types such as monad transformers: the above annotations are
+insufficient. In Haskell we have `MaybeT :: (* -> *) -> * -> *`. Translating
+it into Carry: we have something like `MaybeT :: |(|* -> *) -> |* -> *`. But
+there are monads such as `Cont` for which the annotated kind is not `|* -> *`.
+
+We can solve this with annotation variables. This syntax will be used:
+
+```carry
+MaybeT :: $|(+a$|* -> *) -> @a* -> *`
+```
+
+`+a` introduces a floatability annotation variable, and `@a` uses it as follows:
+
+```carry
+Cont :: -* -> *
+IO :: |* -> *
+MaybeT Cont :: -* -> *
+MaybeT IO :: |* -> *
+```
+
+### Floatability Constraints
+
+Since some functions require type variable introductions to be movable, and the
+mobility of type variable introductions can depend on type parameter
+instantiation: some types must specify type mobility. The syntax for this is yet
+to be decided.

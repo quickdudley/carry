@@ -10,6 +10,7 @@ import qualified Data.Text as T
 
 import Control.Applicative
 import Control.Monad
+import Control.Lens.Setter
 
 import Codec.Phaser.Core
 import Codec.Phaser.Common
@@ -137,3 +138,12 @@ type_p = do
       e <- liftPhase getCount
       return (TyLambda (SourceRegion "" b e) p c i)
   ty
+
+kind_p :: IndentPhase Kind
+kind_p = do
+  b <- liftPhase getCount
+  l <- ki
+  e <- liftPhase getCount
+  return $ set sourceRegion (SourceRegion "" b e) l
+ where
+  ki = undefined

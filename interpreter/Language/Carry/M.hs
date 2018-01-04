@@ -61,14 +61,15 @@ instance HasRegion Type where
     allSourceRegions f i
 
 data Kind =
-  KleeneStar SourceRegion | KindArrow SourceRegion ForallFloatability Kind Kind
+  KleeneStar SourceRegion |
+  KindArrow SourceRegion (Maybe Bool) (Maybe ForallFloatability) Kind Kind
 
 instance HasRegion Kind where
   sourceRegion f (KleeneStar r) = KleeneStar <$> f r
-  sourceRegion f (KindArrow r l a b) = (\r' -> KindArrow r' l a b) <$> f r
+  sourceRegion f (KindArrow r s l a b) = (\r' -> KindArrow r' s l a b) <$> f r
   allSourceRegions f (KleeneStar r) = KleeneStar <$> f r
-  allSourceRegions f (KindArrow r l a b) =
-    (\r' a' b' -> KindArrow r' l a' b') <$>
+  allSourceRegions f (KindArrow r s l a b) =
+    (\r' a' b' -> KindArrow r' s l a' b') <$>
     f r <*>
     allSourceRegions f a <*>
     allSourceRegions f b
