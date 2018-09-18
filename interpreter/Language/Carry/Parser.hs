@@ -78,24 +78,5 @@ isILS = (&&) <$> isSpace <*> (/='\n')
 -- each line must be the same sequence of whitespace characters as for other
 -- lines in the same block. I feel it's the only way to be consistent, even
 -- though some editors will require configuration.
-newBlock :: Monoid p => Phase p Char o a -> Phase p Char o a
-newBlock p = munch1 ((&&) <$> isSpace <*> (/= '\n')) *>
-  ((match '\n' *> indented) <|> p)
- where
-  indented = fromAutomaton $ indent >># p
-  indent = do
-    d <- indent1
-    let
-      go = gd d
-      gd [] = yrl
-      gd (a:r) = get >>= \c -> case () of
-       _ | c == a -> gd r
-         | c == '\n' -> gd d
-         | otherwise -> fail "End of indented block"
-      yrl = undefined
-    go
-  indent1 = go id where
-    go acc = get >>= \c -> case c of
-      '\n' -> go id
-      _ | isSpace c -> go (acc . (c:))
-        | otherwise -> put1 c *> return (acc [])
+indentWith :: Monoid p => Phase p Char o a -> Phase p Char o a
+indentWith = undefined

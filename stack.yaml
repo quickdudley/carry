@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
    git: https://github.com/quickdudley/phaser.git
-   commit: fd5a13d84ef523029f0977af79e4f364615ab24f
+   commit: 4211b9926dcc273167a0ae718e25c97e5ff1f619
   extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
