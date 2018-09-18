@@ -47,3 +47,30 @@ can conclude that the type of `example4` is a subtype of the type of
 for Carry, but it will likely require the type inference engine and type
 checker to be significantly different in implementation from their counterparts
 in GHC.
+
+### Function types
+
+Rank N types behave as in Haskell. But since arguments and results may have
+subtyping: function types can also have subtyping.
+
+```carry
+example6 :: \a . Int -> [a]
+example7 :: Int -> [\a . a]
+example8 :: (\a . [a]) -> Int
+example9 :: [\a . a] -> Int
+```
+
+In the above examples: the type of `example7` is a subtype of the type of
+`example6` and the type of `example8` is a subtype of the type of `example9`
+(because `example8` has a more general argument type)
+
+### Implementation
+
+Each type constructor will be associated with subtyping rules. Since some
+polymorphic functions require their parameterised types to follow certain
+subtyping rules: the `<:` type operator will be available to expresss
+subtype constraints. For example:
+
+```carry
+example10 :: \m | m (\b . b) <: (\b . m b), Monad m . Bool -> m Int
+```
