@@ -17,7 +17,6 @@ module Language.Carry.M (
   HasRegion(..),
   Type(..),
   Kind(..),
-  ForallFloatability(..),
   TyConstraint(..),
   Pattern(..),
   Literal(..),
@@ -34,7 +33,6 @@ import Control.Lens
 import Codec.Phaser.Common (Position(..))
 
 import Language.Carry.Name
-import Language.Carry.ForallFloat
 
 data SourceRegion = SourceRegion {
   _sourceModuleName :: Text,
@@ -62,14 +60,14 @@ instance HasRegion Type where
 
 data Kind =
   KleeneStar SourceRegion |
-  KindArrow SourceRegion (Maybe Bool) (Maybe ForallFloatability) Kind Kind
+  KindArrow SourceRegion Kind Kind
 
 instance HasRegion Kind where
   sourceRegion f (KleeneStar r) = KleeneStar <$> f r
-  sourceRegion f (KindArrow r s l a b) = (\r' -> KindArrow r' s l a b) <$> f r
+  sourceRegion f (KindArrow r a b) = (\r' -> KindArrow r' a b) <$> f r
   allSourceRegions f (KleeneStar r) = KleeneStar <$> f r
-  allSourceRegions f (KindArrow r s l a b) =
-    (\r' a' b' -> KindArrow r' s l a' b') <$>
+  allSourceRegions f (KindArrow r a b) =
+    (\r' a' b' -> KindArrow r' a' b') <$>
     f r <*>
     allSourceRegions f a <*>
     allSourceRegions f b
