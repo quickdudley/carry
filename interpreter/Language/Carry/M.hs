@@ -72,13 +72,20 @@ instance HasRegion Kind where
     allSourceRegions f a <*>
     allSourceRegions f b
 
-data TyConstraint = TyConstraint SourceRegion Name [Type]
+data TyConstraint =
+  TyConstraint SourceRegion Name [Type] |
+  SubtypeConstraint SourceRegion Type Type
 
 instance HasRegion TyConstraint where
   sourceRegion f (TyConstraint r n a) = (\r' -> TyConstraint r' n a) <$> f r
+  sourceRegion f (SubtypeConstraint r a b) = (\r' -> SubtypeConstraint r' a b) <$> f r
   allSourceRegions f (TyConstraint r n a) = (\r' a' -> TyConstraint r' n a') <$>
     f r <*>
     for a (allSourceRegions f)
+  allSourceRegions f (SubtypeConstraint r a b) = SubtypeConstraint <$>
+    f r <*>
+    allSourceRegions f a <*>
+    allSourceRegions f b
 
 data Pattern =
   ConstructorPattern SourceRegion Name |
