@@ -38,6 +38,7 @@ stripComments :: Monoid p => Phase p Char Char ()
 stripComments = go where
   -- The disadvantage of ApplicativeDo is sometimes wanting to use >>= manually.
   go = (<|> return ()) $ get >>= \c -> case c of
+    '\"' -> yield c >> goS
     '{' -> goC1
     '-' -> goL1
     _ -> yield c >> go
@@ -58,6 +59,20 @@ stripComments = go where
     '-' -> goCN
     '}' -> go
     _ -> goCR
+  goS = get >>= \c -> case c of
+    '\"' -> yield c >> go
+    '\\' -> yield c >> goSB
+    '\n' -> fail "Unterminated string literal"
+    _ -> yield c >> goS
+  goSB = get >>= \c -> case c of
+    '\"' -> yield c >> goS
+    '\\' -> yield c >> goS
+    '\n' -> yield c >> goSL
+    _ -> yield c >> goS
+  goSL = get >>= \c -> case c of
+    _ | isSpace c -> yield c >> goSL
+    '\\' -> yield c >> goS
+    _ -> fail "Unterminated string literal"
 
 -- Parse first, resolve later.
 name :: Monoid p => Phase p Char o Name
