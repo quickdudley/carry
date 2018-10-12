@@ -70,6 +70,12 @@ name = do
   return (UnresolvedName $ T.pack $ a : r)
 
 isILS = (&&) <$> isSpace <*> (/='\n')
+prefix :: Monoid p => String -> Phase p Char o String
+prefix = go id where
+  go acc [] = return (acc [])
+  go acc (a:r) = get >>= \c -> if c == a
+    then go (acc . (c:)) r <|> (put1 c *> return (acc []))
+    else put1 c *> return (acc [])
 
 -- The unusual block indentation rule:
 --
@@ -78,5 +84,24 @@ isILS = (&&) <$> isSpace <*> (/='\n')
 -- each line must be the same sequence of whitespace characters as for other
 -- lines in the same block. I feel it's the only way to be consistent, even
 -- though some editors will require configuration.
-indentWith :: Monoid p => Phase p Char o a -> Phase p Char o a
-indentWith = undefined
+blockWithClose :: Monoid p => Bool -> (b -> c -> a) -> Phase p Char o b -> Phase p Char o c -> Phase p Char o a
+blockWithClose rq f b c = start where
+  start = do
+    munch isILS
+    get >>= \c' -> if c' == '\n' then step1 else put1 c' *> (f <$> b <*> (munch isILS *> c))
+  step1 = do
+    lead <- munch isILS
+    get >>= \c -> if c == '\n' then step1 else put1 c *> step2 lead
+  step2 [] | rq = fail "Expected indented block"
+  step2 lead = do
+    b' <- fromAutomaton $ consumeIndent True lead >># b
+    c' <- fromAutomaton $ consumeIndent False lead >># c
+    return $ f b' c'
+  consumeIndent full lead = let
+    go = get >>= \c' -> yield c' *> if c' == '\n'
+      then (if full
+        then string lead
+        else prefix lead
+       ) *> go
+      else go
+    in go
