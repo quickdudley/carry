@@ -99,9 +99,12 @@ blockWithClose rq f b c = start where
     return $ f b' c'
   consumeIndent full lead = let
     go = get >>= \c' -> yield c' *> if c' == '\n'
-      then (if full
-        then string lead
-        else prefix lead
-       ) *> go
+      then linestart *> go
       else go
+    linestart = (do
+      p <- (if full then string else prefix) lead
+      if null p && rq
+        then fail "Unexpected end of indented block"
+        else return ()
+     ) <|> (munch isILS *> char '\n' *> linestart)
     in go
