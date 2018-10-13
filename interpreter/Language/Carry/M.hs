@@ -90,6 +90,7 @@ instance HasRegion TyConstraint where
 data Pattern =
   ConstructorPattern SourceRegion Name |
   AppliedPattern SourceRegion Pattern Pattern |
+  ListPattern SourceRegion [Pattern] |
   VariablePattern SourceRegion Name |
   WildCardPattern SourceRegion
 
@@ -97,6 +98,7 @@ instance HasRegion Pattern where
   sourceRegion f (ConstructorPattern r n) =
     (\r' -> ConstructorPattern r' n) <$> f r
   sourceRegion f (AppliedPattern r a b) = (\r' -> AppliedPattern r' a b) <$> f r
+  sourceRegion f (ListPattern r l) = (\r' -> ListPattern r' l) <$> f r
   sourceRegion f (VariablePattern r n) = (\r' -> VariablePattern r' n) <$> f r
   sourceRegion f (WildCardPattern r) = WildCardPattern <$> f r
   allSourceRegions f (ConstructorPattern r n) =
@@ -105,6 +107,9 @@ instance HasRegion Pattern where
     f r <*>
     allSourceRegions f a <*>
     allSourceRegions f b
+  allSourceRegions f (ListPattern r l) = ListPattern <$>
+    f r <*>
+    for l (allSourceRegions f)
   allSourceRegions f p = sourceRegion f p
 
 data Literal =
@@ -116,6 +121,7 @@ data Expression =
   LiteralExpression SourceRegion Literal |
   ConstructorExpression SourceRegion Name |
   AppliedExpression SourceRegion Expression Expression |
+  ListExpression SourceRegion [Expression] |
   LambdaExpression SourceRegion Pattern Expression |
   CaseExpression SourceRegion
     Expression [([Pattern],Maybe Expression, Expression)] |
@@ -130,6 +136,8 @@ instance HasRegion Expression where
     (\r' -> ConstructorExpression r' n) <$> f r
   sourceRegion f (AppliedExpression r a b) =
     (\r' -> AppliedExpression r' a b) <$> f r
+  sourceRegion f (ListExpression r l) =
+    (\r' -> ListExpression r' l) <$> f r
   sourceRegion f (LambdaExpression r p s) =
     (\r' -> LambdaExpression r' p s) <$> f r
   sourceRegion f (CaseExpression r d c) =
@@ -144,6 +152,9 @@ instance HasRegion Expression where
     f r <*>
     allSourceRegions f a <*>
     allSourceRegions f b
+  allSourceRegions f (ListExpression r l) = ListExpression <$>
+    f r <*>
+    for l (allSourceRegions f)
   allSourceRegions f (LambdaExpression r p s) = LambdaExpression <$>
     f r <*>
     allSourceRegions f p <*>
