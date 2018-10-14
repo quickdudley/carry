@@ -99,11 +99,14 @@ prefix = go id where
 -- each line must be the same sequence of whitespace characters as for other
 -- lines in the same block. I feel it's the only way to be consistent, even
 -- though some editors will require configuration.
-blockWithClose :: Monoid p => Bool -> (b -> c -> a) -> Phase p Char o b -> Phase p Char o c -> Phase p Char o a
+blockWithClose :: Monoid p => Bool -> (b -> c -> a) ->
+  Phase p Char o b -> Phase p Char o c -> Phase p Char o a
 blockWithClose rq f b c = start where
   start = do
     munch isILS
-    get >>= \c' -> if c' == '\n' then step1 else put1 c' *> (f <$> b <*> (munch isILS *> c))
+    get >>= \c' -> if c' == '\n'
+      then step1
+      else put1 c' *> (f <$> b <*> (munch isILS *> c))
   step1 = do
     lead <- munch isILS
     get >>= \c -> if c == '\n' then step1 else put1 c *> step2 lead
@@ -113,13 +116,23 @@ blockWithClose rq f b c = start where
     c' <- fromAutomaton $ consumeIndent False lead >># c
     return $ f b' c'
   consumeIndent full lead = let
-    go = get >>= \c' -> yield c' *> if c' == '\n'
+    go = (<|> pure ()) $ get >>= \c' -> yield c' *> if c' == '\n'
       then linestart *> go
       else go
-    linestart = (do
-      p <- (if full then string else prefix) lead
-      if null p && rq
-        then fail "Unexpected end of indented block"
-        else return ()
-     ) <|> (munch isILS *> char '\n' *> linestart)
+    linestart = let
+      m _ [] = return ()
+      m n (a:r) = get >>= \c' -> case () of
+       _ | c' == a -> n `seq` m (n + 1) r
+         | c' == '\n' -> m 0 lead
+         | full -> fail "Unexpected end of indented block"
+         | rq && n == 0 -> fail "Unexpected end of indented block"
+         | otherwise -> put1 c'
+      in m 0 lead
     in go
+
+listOf :: Monoid p => Phase p Char o a -> Phase p Char o [a]
+listOf p = do
+  char '['
+  blockWithClose True const (sepBy p c) (munch isSpace *> char ']')
+ where
+  c = munch isSpace *> char ',' *> munch isSpace
