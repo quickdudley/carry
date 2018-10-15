@@ -99,6 +99,34 @@ prefix = go id where
 -- each line must be the same sequence of whitespace characters as for other
 -- lines in the same block. I feel it's the only way to be consistent, even
 -- though some editors will require configuration.
+jBlock :: Monoid p => Phase p Char o a -> Phase p Char o a
+jBlock = fromAutomaton . (start >>#) where
+  start = (<|> return ()) $ get >>= \c -> yield c *> case c of
+    '\n' -> line2
+    _ -> start
+  line2 = do
+    lead <- munch isILS
+    c <- get
+    case c of
+      '\n' -> line2
+      _ -> put1 c *> consumeIndent True True lead
+
+consumeIndent :: Monoid p => Bool -> Bool -> [Char] -> Phase p Char Char ()
+consumeIndent rq full lead = let
+  go = (<|> pure ()) $ get >>= \c' -> yield c' *> if c' == '\n'
+    then linestart *> go
+    else go
+  linestart = let
+    m _ [] = return ()
+    m n (a:r) = get >>= \c' -> case () of
+     _ | c' == a -> n `seq` m (n + 1) r
+       | c' == '\n' -> m 0 lead
+       | full -> fail "Unexpected end of indented block"
+       | rq && n == 0 -> fail "Unexpected end of indented block"
+       | otherwise -> put1 c'
+    in m 0 lead
+  in go
+
 blockWithClose :: Monoid p => Bool -> (b -> c -> a) ->
   Phase p Char o b -> Phase p Char o c -> Phase p Char o a
 blockWithClose rq f b c = start where
@@ -112,23 +140,10 @@ blockWithClose rq f b c = start where
     get >>= \c -> if c == '\n' then step1 else put1 c *> step2 lead
   step2 [] | rq = fail "Expected indented block"
   step2 lead = do
-    b' <- fromAutomaton $ consumeIndent True lead >># b
-    c' <- fromAutomaton $ consumeIndent False lead >># c
+    b' <- fromAutomaton $ consumeIndent rq True lead >># b
+    c' <- fromAutomaton $ consumeIndent False False lead >># c
     return $ f b' c'
-  consumeIndent full lead = let
-    go = (<|> pure ()) $ get >>= \c' -> yield c' *> if c' == '\n'
-      then linestart *> go
-      else go
-    linestart = let
-      m _ [] = return ()
-      m n (a:r) = get >>= \c' -> case () of
-       _ | c' == a -> n `seq` m (n + 1) r
-         | c' == '\n' -> m 0 lead
-         | full -> fail "Unexpected end of indented block"
-         | rq && n == 0 -> fail "Unexpected end of indented block"
-         | otherwise -> put1 c'
-      in m 0 lead
-    in go
+
 
 listOf :: Monoid p => Phase p Char o a -> Phase p Char o [a]
 listOf p = do
