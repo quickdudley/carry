@@ -151,3 +151,10 @@ listOf p = do
   blockWithClose True const (sepBy p c) (munch isSpace *> char ']')
  where
   c = munch isSpace *> char ',' *> munch isSpace
+
+withRegion :: Phase Position i o (SourceRegion -> a) -> Phase Position i o a
+withRegion p = do
+  begins <- getCount
+  f <- p
+  ends <- getCount
+  return (f $ SourceRegion "" begins ends)
