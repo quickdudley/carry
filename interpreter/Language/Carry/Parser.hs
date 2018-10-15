@@ -152,6 +152,7 @@ listOf p = do
  where
   c = munch isSpace *> char ',' *> munch isSpace
 
+-- Parse with this, then annotate the result with 'setFilename'
 withRegion :: Phase Position i o (SourceRegion -> a) -> Phase Position i o a
 withRegion p = do
   begins <- getCount

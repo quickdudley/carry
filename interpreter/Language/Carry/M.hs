@@ -23,7 +23,8 @@ module Language.Carry.M (
   Expression(..),
   DoStatement(..),
   ADirection(..),
-  Declaration(..)
+  Declaration(..),
+  setFilename
  ) where
 
 import Data.Text
@@ -212,3 +213,8 @@ instance HasRegion Declaration where
     f r <*>
     for c (allSourceRegions f) <*>
     for m (allSourceRegions f)
+
+setFilename :: HasRegion t => Text -> t -> t
+setFilename n = runIdentity . allSourceRegions (\(SourceRegion _ b e) ->
+  pure $ SourceRegion n b e
+ )
