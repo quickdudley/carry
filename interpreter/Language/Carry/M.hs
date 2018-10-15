@@ -122,6 +122,7 @@ data Expression =
   LiteralExpression SourceRegion Literal |
   ConstructorExpression SourceRegion Name |
   AppliedExpression SourceRegion Expression Expression |
+  InfixExpression SourceRegion [Expression] |
   ListExpression SourceRegion [Expression] |
   LambdaExpression SourceRegion Pattern Expression |
   CaseExpression SourceRegion
@@ -137,6 +138,8 @@ instance HasRegion Expression where
     (\r' -> ConstructorExpression r' n) <$> f r
   sourceRegion f (AppliedExpression r a b) =
     (\r' -> AppliedExpression r' a b) <$> f r
+  sourceRegion f (InfixExpression r s) =
+    (\r' -> InfixExpression r' s) <$> f r
   sourceRegion f (ListExpression r l) =
     (\r' -> ListExpression r' l) <$> f r
   sourceRegion f (LambdaExpression r p s) =
@@ -153,6 +156,9 @@ instance HasRegion Expression where
     f r <*>
     allSourceRegions f a <*>
     allSourceRegions f b
+  allSourceRegions f (InfixExpression r s) = InfixExpression <$>
+    f r <*>
+    for s (allSourceRegions f)
   allSourceRegions f (ListExpression r l) = ListExpression <$>
     f r <*>
     for l (allSourceRegions f)
@@ -160,6 +166,21 @@ instance HasRegion Expression where
     f r <*>
     allSourceRegions f p <*>
     allSourceRegions f s
+  allSourceRegions f (CaseExpression r d c) = CaseExpression <$>
+    f r <*>
+    allSourceRegions f d <*>
+    for c (\(p,g,e) -> (,,) <$>
+      for p (allSourceRegions f) <*>
+      for g (allSourceRegions f) <*>
+      allSourceRegions f e
+     )
+  allSourceRegions f (LetExpression r d s) = LetExpression <$>
+    f r <*>
+    for d (allSourceRegions f) <*>
+    allSourceRegions f s
+  allSourceRegions f (DoExpression r s) = DoExpression <$>
+    f r <*>
+    for s (allSourceRegions f)
   allSourceRegions f e = sourceRegion f e
 
 data DoStatement =
