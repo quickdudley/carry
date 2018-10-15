@@ -4,7 +4,9 @@ module Language.Carry.Parser (
   moduleName
  ) where
 
+import Data.Bits
 import Data.Char
+import Data.List
 import Data.Void
 import qualified Data.Text as T
 
@@ -159,3 +161,31 @@ withRegion p = do
   f <- p
   ends <- getCount
   return (f $ SourceRegion "" begins ends)
+
+literalString :: Monoid p => Phase p Char o String
+literalString = char '\"' *> go id where
+  go acc = satisfy (not . isControl) >>= \c -> case c of
+    '\n' -> fail "Newline in string literal without \'\\\'"
+    '\"' -> return (acc [])
+    '\\' -> goQ acc
+    _ -> go (acc . (c:))
+  goQ acc = get >>= \c -> case c of
+    '\n' -> munch isSpace *> char '\\' *> go acc
+    'n' -> go (acc . ('\n':))
+    '\"' -> go (acc . ('\"':))
+    '\\' -> go (acc . ('\\':))
+    '/' -> go (acc . ('/':))
+    'b' -> go (acc . ('\b':))
+    'f' -> go (acc . ('\f':))
+    'r' -> go (acc . ('\r':))
+    't' -> go (acc . ('\t':))
+    'u' -> hesc acc
+    _ -> fail "Unrecognised escape sequence"
+  hesc acc = ((\a b c d ->
+     toEnum $ foldl1' (.|.) $
+       zipWith shiftL (map digitToInt [a,b,c,d]) [12,8,4,0]
+    ) <$>
+    satisfy isHexDigit <*>
+    satisfy isHexDigit <*>
+    satisfy isHexDigit <*>
+    satisfy isHexDigit) >>= \c -> go (acc . (c:))
