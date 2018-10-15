@@ -122,7 +122,7 @@ data Expression =
   LiteralExpression SourceRegion Literal |
   ConstructorExpression SourceRegion Name |
   AppliedExpression SourceRegion Expression Expression |
-  InfixExpression SourceRegion [Expression] |
+  InfixExpression SourceRegion [Either Name Expression] |
   ListExpression SourceRegion [Expression] |
   LambdaExpression SourceRegion Pattern Expression |
   CaseExpression SourceRegion
@@ -158,7 +158,10 @@ instance HasRegion Expression where
     allSourceRegions f b
   allSourceRegions f (InfixExpression r s) = InfixExpression <$>
     f r <*>
-    for s (allSourceRegions f)
+    for s (\e -> case e of
+      Left _ -> pure e
+      Right x -> fmap Right (allSourceRegions f x)
+     )
   allSourceRegions f (ListExpression r l) = ListExpression <$>
     f r <*>
     for l (allSourceRegions f)
