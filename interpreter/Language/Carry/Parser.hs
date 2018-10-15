@@ -189,3 +189,13 @@ literalString = char '\"' *> go id where
     satisfy isHexDigit <*>
     satisfy isHexDigit <*>
     satisfy isHexDigit) >>= \c -> go (acc . (c:))
+
+literal :: Monoid p => Phase p Char o Literal
+literal = (StringLiteral <$> literalString) <|>
+  (IntegerLiteral <$> regular) <|>
+  (FractionalLiteral <$> (fromAutomaton $ requirePoint >># regular))
+ where
+  requirePoint = get >>= \c -> yield c *> case c of
+    '.' -> mayEnd
+    _ -> requirePoint
+  mayEnd = (<|> pure ()) $ get >>= \c -> yield c *> mayEnd
