@@ -115,6 +115,7 @@ instance HasRegion Pattern where
 
 data Literal =
   StringLiteral String |
+  CharLiteral Char |
   IntegerLiteral Integer |
   FractionalLiteral Rational
 

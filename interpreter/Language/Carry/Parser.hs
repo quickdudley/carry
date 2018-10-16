@@ -162,36 +162,51 @@ withRegion p = do
   ends <- getCount
   return (f $ SourceRegion "" begins ends)
 
-literalString :: Monoid p => Phase p Char o String
-literalString = char '\"' *> go id where
-  go acc = satisfy (not . isControl) >>= \c -> case c of
-    '\n' -> fail "Newline in string literal without \'\\\'"
-    '\"' -> return (acc [])
-    '\\' -> goQ acc
-    _ -> go (acc . (c:))
-  goQ acc = get >>= \c -> case c of
-    '\n' -> munch isSpace *> char '\\' *> go acc
-    'n' -> go (acc . ('\n':))
-    '\"' -> go (acc . ('\"':))
-    '\\' -> go (acc . ('\\':))
-    '/' -> go (acc . ('/':))
-    'b' -> go (acc . ('\b':))
-    'f' -> go (acc . ('\f':))
-    'r' -> go (acc . ('\r':))
-    't' -> go (acc . ('\t':))
-    'u' -> hesc acc
+inLiteralChar :: Monoid p => Phase p Char o Char
+inLiteralChar = get >>= \c -> case c of
+  _ | isControl c -> fail "Unexpected control character"
+  '\"' -> fail "Unescaped double quote"
+  '\'' -> fail "Unescaped single quote"
+  '\\' -> escaped
+  _ -> return c
+ where
+  escaped = get >>= \c -> case c of
+    'n' -> return '\n'
+    '\"' -> return '\"'
+    '\'' -> return '\''
+    '\\' -> return '\\'
+    '/' -> return '/'
+    'b' -> return '\b'
+    'f' -> return '\f'
+    'r' -> return '\r'
+    't' -> return '\t'
+    'u' -> hesc
     _ -> fail "Unrecognised escape sequence"
-  hesc acc = ((\a b c d ->
+  hesc = (\a b c d ->
      toEnum $ foldl1' (.|.) $
        zipWith shiftL (map digitToInt [a,b,c,d]) [12,8,4,0]
     ) <$>
     satisfy isHexDigit <*>
     satisfy isHexDigit <*>
     satisfy isHexDigit <*>
-    satisfy isHexDigit) >>= \c -> go (acc . (c:))
+    satisfy isHexDigit
+
+literalString :: Monoid p => Phase p Char o String
+literalString = char '\"' *> go id where
+  go acc = (inLiteralChar >>= \c -> go (acc . (c:))) <|>
+    (qnl acc) <|>
+    (("Expected closing double quote" <?> char '\"') *> pure (acc []))
+  qnl acc = string "\\\n" *>
+    munch isSpace *>
+    char '\\' *>
+    go acc
+
+literalChar :: Monoid p => Phase p Char o Char
+literalChar = char '\'' *> inLiteralChar <* ("Expected closing single quote" <?> char '\'')
 
 literal :: Monoid p => Phase p Char o Literal
 literal = (StringLiteral <$> literalString) <|>
+  (CharLiteral <$> literalChar) <|>
   (IntegerLiteral <$> regular) <|>
   (FractionalLiteral <$> (fromAutomaton $ requirePoint >># regular))
  where
