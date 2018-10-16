@@ -79,12 +79,19 @@ stripComments = go where
 -- Parse first, resolve later.
 name :: Monoid p => Phase p Char o Name
 name = do
+  m <- (do
+    l <- moduleName
+    char '.'
+    case l of
+     [] -> fail "\'.\' is not understood"
+     _ -> return l
+   ) <|> pure []
   a <- satisfy isAlpha
   r <- munch $ do
     c1 <- isAlphaNum
     c2 <- (== '_')
     return (c1 || c2)
-  return (UnresolvedName $ T.pack $ a : r)
+  return (UnresolvedName m $ T.pack $ a : r)
 
 isILS = (&&) <$> isSpace <*> (/='\n')
 prefix :: Monoid p => String -> Phase p Char o String
