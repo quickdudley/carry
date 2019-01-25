@@ -115,6 +115,7 @@ infixName = (do
     _ -> False
   case s of
     "=" -> fail "Unexpected equals sign"
+    "\\" -> fail "Unexpected backslash"
     _ -> return (UnresolvedName m $ T.pack s)
  ) <|> (char '`' *> name <* char '`')
 
@@ -246,3 +247,22 @@ literal = (StringLiteral <$> literalString) <|>
     '.' -> mayEnd
     _ -> requirePoint
   mayEnd = (<|> pure ()) $ get >>= \c -> yield c *> mayEnd
+
+lambdaExpression :: Phase Position Char o Expression
+lambdaExpression = withRegion $ do
+  char '\\'
+  munch isSpace
+  p <- pattern `sepBy` munch1 isSpace
+  munch isSpace
+  string "->"
+  r <- jBlock $ do
+    munch isSpace
+    expression
+  return $ \s -> LambdaExpression s p r
+
+expression :: Phase Position Char o Expression
+expression = (withRegion $ (flip LiteralExpression) <$> literal) <|>
+  lambdaExpression
+
+pattern :: Phase Position Char o Pattern
+pattern = fail "Pattern parser not implemented"

@@ -125,7 +125,7 @@ data Expression =
   AppliedExpression SourceRegion Expression Expression |
   InfixExpression SourceRegion [Either Name Expression] |
   ListExpression SourceRegion [Expression] |
-  LambdaExpression SourceRegion Pattern Expression |
+  LambdaExpression SourceRegion [Pattern] Expression |
   CaseExpression SourceRegion
     Expression [([Pattern],Maybe Expression, Expression)] |
   LetExpression SourceRegion [Declaration] Expression |
@@ -168,7 +168,7 @@ instance HasRegion Expression where
     for l (allSourceRegions f)
   allSourceRegions f (LambdaExpression r p s) = LambdaExpression <$>
     f r <*>
-    allSourceRegions f p <*>
+    for p (allSourceRegions f) <*>
     allSourceRegions f s
   allSourceRegions f (CaseExpression r d c) = CaseExpression <$>
     f r <*>
