@@ -93,6 +93,31 @@ name = do
     return (c1 || c2)
   return (UnresolvedName m $ T.pack $ a : r)
 
+infixName :: Monoid p => Phase p Char o Name
+infixName = (do
+  m <- (do
+    l <- moduleName
+    char '.'
+    case l of
+      [] -> fail "\'.\' is not understood"
+      _ -> return l
+   ) <|> pure []
+  s <- munch $ \c -> case generalCategory c of
+    _ | c == '`' -> False
+      | c == '|' -> False
+    ConnectorPunctuation -> True
+    DashPunctuation -> True
+    OtherPunctuation -> True
+    MathSymbol -> True
+    CurrencySymbol -> True
+    ModifierSymbol -> True
+    OtherSymbol -> True
+    _ -> False
+  case s of
+    "=" -> fail "Unexpected equals sign"
+    _ -> return (UnresolvedName m $ T.pack s)
+ ) <|> (char '`' *> name <* char '`')
+
 isILS = (&&) <$> isSpace <*> (/='\n')
 prefix :: Monoid p => String -> Phase p Char o String
 prefix = go id where
