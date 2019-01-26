@@ -41,7 +41,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - git: https://github.com/quickdudley/phaser.git
-  commit: bb37b7a35855f56e3f7b559d78e8e82c0de1bcf3
+  commit: 69e65538102ba196081afd72a2939e0f4b415f30
 
 # Override default flag values for local packages and extra-deps
 flags: {}

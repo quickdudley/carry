@@ -54,7 +54,7 @@ stripComments = go where
   goCR = get >>= \c -> case c of
     '-' -> goCN
     _ -> goCR
-  goLR = get >>= \c -> case c of
+  goLR = (<|> return ()) $ get >>= \c -> case c of
     '\n' -> yield '\n' >> go
     _ -> goLR
   goCN = get >>= \c -> case c of
