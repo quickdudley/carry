@@ -123,8 +123,8 @@ isILS = (&&) <$> isSpace <*> (/='\n')
 prefix :: Monoid p => String -> Phase p Char o String
 prefix = go id where
   go acc [] = return (acc [])
-  go acc (a:r) = get >>= \c -> if c == a
-    then go (acc . (c:)) r <|> (put1 c *> return (acc []))
+  go acc (a:r) = (<|> (acc [] <$ eof)) $ get >>= \c -> if c == a
+    then go (acc . (c:)) r
     else put1 c *> return (acc [])
 
 -- The unusual block indentation rule:
@@ -134,17 +134,41 @@ prefix = go id where
 -- each line must be the same sequence of whitespace characters as for other
 -- lines in the same block. I feel it's the only way to be consistent, even
 -- though some editors will require configuration.
+block :: Monoid p => Phase p Char o a -> Phase p Char o a
+block = fmap snd . block'
+
+block' :: Monoid p => Phase p Char o a -> Phase p Char o ([Char],a)
+block' p = munch isILS >>
+  (eof *> ((,) [] <$> p)) <|> (get >>= \nc -> case nc of
+    '\n' -> line1
+    _ -> put1 nc *> ((,) [] <$> p)
+   )
+ where
+  line1 = munch1 isILS >>= \lead ->
+    (eof *> ((,) lead <$> p)) <|> (get >>= \nc -> case nc of
+      '\n' -> line1
+      _ -> put1 nc *> (fmap ((,) lead) $ fromAutomaton $ consumeIndent True True lead >># p) <*
+        verifyFinished lead
+     )
+
 jBlock :: Monoid p => Phase p Char o a -> Phase p Char o a
-jBlock = fromAutomaton . (start >>#) where
-  start = (<|> return ()) $ get >>= \c -> yield c *> case c of
-    '\n' -> line2
-    _ -> start
-  line2 = do
-    lead <- munch isILS
-    c <- get
-    case c of
-      '\n' -> line2
-      _ -> put1 c *> consumeIndent True True lead
+jBlock p = undefined
+
+verifyFinished lead = buffer $ let
+  vnl = (get >>= \c -> case c of
+    '\n' -> vnp
+    _ | isSpace c -> vnl
+      | otherwise -> fail "Inner parser has finished but indented block has not"
+   ) <|> return False
+  vnp = let
+    go [] = fail "Inner parser has finished but indented block has not"
+    go (a:r) = (get >>= \c -> yield c *> case c of
+      '\n' -> go lead
+      _ | c == a -> go r
+        | otherwise -> return True
+     ) <|> return False
+    in go lead
+  in vnl
 
 consumeIndent :: Monoid p => Bool -> Bool -> [Char] -> Phase p Char Char ()
 consumeIndent rq full lead = let
@@ -255,7 +279,7 @@ lambdaExpression = withRegion $ do
   p <- pattern `sepBy` munch1 isSpace
   munch isSpace
   string "->"
-  r <- jBlock $ do
+  r <- block $ do
     munch isSpace
     expression
   return $ \s -> LambdaExpression s p r
