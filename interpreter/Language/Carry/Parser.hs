@@ -152,7 +152,22 @@ block' p = munch isILS >>
      )
 
 jBlock :: Monoid p => Phase p Char o a -> Phase p Char o a
-jBlock p = undefined
+jBlock p = fromAutomaton (chainWith (,) line1 p) >>= \ ~(indent, r) -> case indent of
+  Just lead -> verifyFinished lead >> return r
+  Nothing -> verifyOneLine >> return r
+ where
+  line1 = (<|> pure Nothing) $ get >>= \c -> yield c >> case c of
+    '\n' -> line2ws id <|> pure Nothing
+    _ -> line1
+  line2ws lead = get >>= \c -> if isSpace c
+    then yield c >> line2ws (lead . (c:))
+    else case lead [] of
+      [] -> fail "No indented block"
+      lead' -> yield c >> line2 lead'
+  line2 lead = (<|> pure (Just lead)) $ get >>= \c -> yield c >> case c of
+    '\n' -> line3 lead
+    _ -> line2 lead
+  line3 lead = = foldr (\c r -> char c >> yield c >> r) (return ()) lead >> line2 lead
 
 verifyFinished lead = buffer $ let
   vnl = (get >>= \c -> case c of
@@ -169,6 +184,10 @@ verifyFinished lead = buffer $ let
      ) <|> return False
     in go lead
   in vnl
+
+verifyOneLine = buffer $ let
+  go = get >>= undefined
+  in undefined
 
 consumeIndent :: Monoid p => Bool -> Bool -> [Char] -> Phase p Char Char ()
 consumeIndent rq full lead = let
