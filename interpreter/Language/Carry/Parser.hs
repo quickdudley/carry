@@ -186,7 +186,21 @@ verifyFinished lead = buffer $ let
   in vnl
 
 verifyOneLine = buffer $ let
-  go = get >>= undefined
+  line1 = (get >>= \c -> case c of
+    '\n' -> yield c >> line2
+    _ | isSpace c -> yield c >> line1
+      | otherwise -> fail "Inner parser has finished but the line has not"
+   ) <|> return False
+  line2 = (get >>= \c -> case c of
+    '\n' -> yield c >> line2
+    _ | isSpace c -> yield c >> blankLine
+      | otherwise -> yield c >> return True
+   ) <|> return False
+  blankLine = (get >>= \c -> case c of
+    '\n' -> yield c >> line2
+    _ | isSpace c -> yield c >> blankLine
+      | otherwise -> fail "Inner parser has finished but indented block has not"
+   ) <|> return False
   in undefined
 
 consumeIndent :: Monoid p => Bool -> Bool -> [Char] -> Phase p Char Char ()
