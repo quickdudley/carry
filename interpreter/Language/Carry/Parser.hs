@@ -320,7 +320,19 @@ lambdaExpression = withRegion $ do
 
 expression :: Phase Position Char o Expression
 expression = (withRegion $ (flip LiteralExpression) <$> literal) <|>
+  listExpression <|>
   lambdaExpression
 
+listExpression :: Phase Position Char o Expression
+listExpression = withRegion $ flip ListExpression <$> listOf expression
+
 pattern :: Phase Position Char o Pattern
-pattern = fail "Pattern parser not implemented"
+pattern = wildcardPattern <|>
+  listPattern <|>
+  fail "Pattern parser not fully implemented"
+
+wildcardPattern :: Phase Position Char o Pattern
+wildcardPattern = withRegion $ WildCardPattern <$ char '_'
+
+listPattern :: Phase Position Char o Pattern
+listPattern = withRegion $ flip ListPattern <$> listOf pattern
