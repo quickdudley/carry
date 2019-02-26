@@ -167,7 +167,7 @@ jBlock p = fromAutomaton (chainWith (,) line1 p) >>= \ ~(indent, r) -> case inde
   line2 lead = (<|> pure (Just lead)) $ get >>= \c -> yield c >> case c of
     '\n' -> line3 lead
     _ -> line2 lead
-  line3 lead = = foldr (\c r -> char c >> yield c >> r) (return ()) lead >> line2 lead
+  line3 lead = foldr (\c r -> char c >> yield c >> r) (return ()) lead >> line2 lead
 
 verifyFinished lead = buffer $ let
   vnl = (get >>= \c -> case c of
@@ -185,6 +185,7 @@ verifyFinished lead = buffer $ let
     in go lead
   in vnl
 
+verifyOneLine :: Monoid p => Phase p Char o ()
 verifyOneLine = buffer $ let
   line1 = (get >>= \c -> case c of
     '\n' -> yield c >> line2
@@ -201,7 +202,7 @@ verifyOneLine = buffer $ let
     _ | isSpace c -> yield c >> blankLine
       | otherwise -> fail "Inner parser has finished but indented block has not"
    ) <|> return False
-  in undefined
+  in line1
 
 consumeIndent :: Monoid p => Bool -> Bool -> [Char] -> Phase p Char Char ()
 consumeIndent rq full lead = let
