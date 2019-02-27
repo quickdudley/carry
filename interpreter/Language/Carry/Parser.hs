@@ -102,9 +102,11 @@ infixName = (do
       [] -> fail "\'.\' is not understood"
       _ -> return l
    ) <|> pure []
-  s <- munch $ \c -> case generalCategory c of
+  s <- munch1 $ \c -> case generalCategory c of
     _ | c == '`' -> False
-      | c == '|' -> False
+      | c == '_' -> False
+      | c == '\'' -> False
+      | c == '\"' -> False
     ConnectorPunctuation -> True
     DashPunctuation -> True
     OtherPunctuation -> True
@@ -116,6 +118,7 @@ infixName = (do
   case s of
     "=" -> fail "Unexpected equals sign"
     "\\" -> fail "Unexpected backslash"
+    "|" -> fail "Unexpected guard"
     _ -> return (UnresolvedName m $ T.pack s)
  ) <|> (char '`' *> name <* char '`')
 
@@ -319,7 +322,17 @@ lambdaExpression = withRegion $ do
   return $ \s -> LambdaExpression s p r
 
 expression :: Phase Position Char o Expression
-expression = (withRegion $ (flip LiteralExpression) <$> literal) <|>
+expression = withRegion $ infixExpression >>= \l -> case l of
+  [] -> fail "Expected an expression"
+  [Right e] -> return (const e)
+  _ -> return (\r -> InfixExpression r l)
+
+-- Since we don't know operator precedence at parse time: we defer that step.
+infixExpression :: Phase Position Char o [Either Name Expression]
+infixExpression = sepBy (fmap Right expression' <|> fmap Left infixName) (munch1 isSpace)
+
+expression' :: Phase Position Char o Expression
+expression' = (withRegion $ (flip LiteralExpression) <$> literal) <|>
   listExpression <|>
   lambdaExpression
 
@@ -327,7 +340,16 @@ listExpression :: Phase Position Char o Expression
 listExpression = withRegion $ flip ListExpression <$> listOf expression
 
 pattern :: Phase Position Char o Pattern
-pattern = wildcardPattern <|>
+pattern = withRegion $ (\l r -> case l of
+  [Right p] -> p
+  _ -> InfixPattern r l
+ ) <$> infixPattern
+
+infixPattern :: Phase Position Char o [Either Name Pattern]
+infixPattern = sepBy (fmap Right pattern' <|> fmap Left infixName) (munch1 isSpace)
+
+pattern' :: Phase Position Char o Pattern
+pattern' = wildcardPattern <|>
   listPattern <|>
   fail "Pattern parser not fully implemented"
 

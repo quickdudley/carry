@@ -91,6 +91,7 @@ instance HasRegion TyConstraint where
 data Pattern =
   ConstructorPattern SourceRegion Name |
   AppliedPattern SourceRegion Pattern Pattern |
+  InfixPattern SourceRegion [Either Name Pattern] |
   ListPattern SourceRegion [Pattern] |
   VariablePattern SourceRegion Name |
   WildCardPattern SourceRegion
@@ -99,6 +100,7 @@ instance HasRegion Pattern where
   sourceRegion f (ConstructorPattern r n) =
     (\r' -> ConstructorPattern r' n) <$> f r
   sourceRegion f (AppliedPattern r a b) = (\r' -> AppliedPattern r' a b) <$> f r
+  sourceRegion f (InfixPattern r l) = (\r' -> InfixPattern r' l) <$> f r
   sourceRegion f (ListPattern r l) = (\r' -> ListPattern r' l) <$> f r
   sourceRegion f (VariablePattern r n) = (\r' -> VariablePattern r' n) <$> f r
   sourceRegion f (WildCardPattern r) = WildCardPattern <$> f r
@@ -108,6 +110,12 @@ instance HasRegion Pattern where
     f r <*>
     allSourceRegions f a <*>
     allSourceRegions f b
+  allSourceRegions f (InfixPattern r l) = InfixPattern <$>
+    f r <*>
+    for l (\p -> case p of
+      Left _ -> pure p
+      Right x -> fmap Right (allSourceRegions f x)
+     )
   allSourceRegions f (ListPattern r l) = ListPattern <$>
     f r <*>
     for l (allSourceRegions f)
