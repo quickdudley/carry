@@ -346,8 +346,14 @@ expression :: Phase Position Char o Expression
 expression = (withRegion $ infixExpression >>= \l -> case l of
   [] -> fail "Expected an expression"
   [Right e] -> return (const e)
-  _ -> return (\r -> InfixExpression r l)
- ) <|>
+  -- TODO: Optimize this
+  _ -> (return (\r -> InfixExpression r l)) <|> do
+    rhs <- expressionR
+    return (\r -> InfixExpression r (l ++ [Right rhs]))
+ ) <|> expressionR
+
+expressionR :: Phase Position Char o Expression
+expressionR =
   lambdaExpression <|>
   caseExpression
 
@@ -357,7 +363,8 @@ infixExpression = sepBy (fmap Right expression' <|> fmap Left infixName) (munch1
 
 expression' :: Phase Position Char o Expression
 expression' = (withRegion $ (flip LiteralExpression) <$> literal) <|>
-  listExpression
+  listExpression <|>
+  (char '(' *> expression <* char ')')
 
 listExpression :: Phase Position Char o Expression
 listExpression = withRegion $ flip ListExpression <$> listOf expression
