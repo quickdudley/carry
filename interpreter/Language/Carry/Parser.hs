@@ -321,6 +321,25 @@ lambdaExpression = withRegion $ do
     expression
   return $ \s -> LambdaExpression s p r
 
+caseExpression :: Phase Position Char o Expression
+caseExpression = withRegion $ do
+  string "case"
+  munch1 isSpace
+  cond <- expression
+  cases <- block $ let
+    go1 p acc = do
+      g <- (char '|' *> munch isSpace *> (Just <$> expression)) <|> pure Nothing
+      munch isSpace
+      string "->"
+      r <- block expression
+      let acc' = ((p,g,r):) . acc
+      go1 p acc' <|> go acc' <|> pure (acc' [])
+    go acc = do
+      p <- pattern
+      go1 p acc
+    in go id
+  return $ \s -> CaseExpression s cond cases
+
 expression :: Phase Position Char o Expression
 expression = withRegion $ infixExpression >>= \l -> case l of
   [] -> fail "Expected an expression"
@@ -334,7 +353,8 @@ infixExpression = sepBy (fmap Right expression' <|> fmap Left infixName) (munch1
 expression' :: Phase Position Char o Expression
 expression' = (withRegion $ (flip LiteralExpression) <$> literal) <|>
   listExpression <|>
-  lambdaExpression
+  lambdaExpression <|>
+  caseExpression
 
 listExpression :: Phase Position Char o Expression
 listExpression = withRegion $ flip ListExpression <$> listOf expression

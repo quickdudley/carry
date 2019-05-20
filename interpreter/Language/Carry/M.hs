@@ -135,7 +135,7 @@ data Expression =
   ListExpression SourceRegion [Expression] |
   LambdaExpression SourceRegion [Pattern] Expression |
   CaseExpression SourceRegion
-    Expression [([Pattern],Maybe Expression, Expression)] |
+    Expression [(Pattern,Maybe Expression, Expression)] |
   LetExpression SourceRegion [Declaration] Expression |
   IfExpression SourceRegion Expression Expression Expression |
   DoExpression SourceRegion [DoStatement]
@@ -182,7 +182,7 @@ instance HasRegion Expression where
     f r <*>
     allSourceRegions f d <*>
     for c (\(p,g,e) -> (,,) <$>
-      for p (allSourceRegions f) <*>
+      allSourceRegions f p <*>
       for g (allSourceRegions f) <*>
       allSourceRegions f e
      )
