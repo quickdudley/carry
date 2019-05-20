@@ -92,7 +92,14 @@ name = do
     c1 <- isAlphaNum
     c2 <- (== '_')
     return (c1 || c2)
-  return (UnresolvedName m $ T.pack $ a : r)
+  let n = T.pack $ a : r
+  forM_ reservedWords $ \rw -> if rw == n
+    then fail $ "Reserved word: " ++ show n
+    else return ()
+  return (UnresolvedName m n)
+
+reservedWords :: [T.Text]
+reservedWords = ["case","if","then","else","let","of","in"]
 
 infixName :: Monoid p => Phase p Char o Name
 infixName = (do
@@ -423,8 +430,9 @@ monotype = withRegion $ do
     return (\r -> TyCon r a args)
 
 typeArg :: Phase Position Char o Type
-typeArg = (withRegion ((\n r -> TyCon r n []) <$> name)) <|>
-  (char '(' *> munch isSpace *> type_ <* munch isSpace <* char ')')
+typeArg = withRegion $
+  ((\n r -> TyCon r n []) <$> name) <|>
+  ((\t r -> (sourceRegion .~ r) t) <$> (char '(' *> munch isSpace *> type_ <* munch isSpace <* char ')'))
 
 polytype :: Phase Position Char o Type
 polytype = fail "polymorphic types not yet implemented"
