@@ -326,6 +326,8 @@ caseExpression = withRegion $ do
   string "case"
   munch1 isSpace
   cond <- expression
+  munch1 isSpace
+  string "of"
   cases <- block $ let
     go1 p acc = do
       g <- (char '|' *> munch isSpace *> (Just <$> expression)) <|> pure Nothing
@@ -341,10 +343,13 @@ caseExpression = withRegion $ do
   return $ \s -> CaseExpression s cond cases
 
 expression :: Phase Position Char o Expression
-expression = withRegion $ infixExpression >>= \l -> case l of
+expression = (withRegion $ infixExpression >>= \l -> case l of
   [] -> fail "Expected an expression"
   [Right e] -> return (const e)
   _ -> return (\r -> InfixExpression r l)
+ ) <|>
+  lambdaExpression <|>
+  caseExpression
 
 -- Since we don't know operator precedence at parse time: we defer that step.
 infixExpression :: Phase Position Char o [Either Name Expression]
@@ -352,9 +357,7 @@ infixExpression = sepBy (fmap Right expression' <|> fmap Left infixName) (munch1
 
 expression' :: Phase Position Char o Expression
 expression' = (withRegion $ (flip LiteralExpression) <$> literal) <|>
-  listExpression <|>
-  lambdaExpression <|>
-  caseExpression
+  listExpression
 
 listExpression :: Phase Position Char o Expression
 listExpression = withRegion $ flip ListExpression <$> listOf expression
