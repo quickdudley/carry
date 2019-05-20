@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import Control.Applicative
 import Control.Monad
 import Control.Lens.Setter
+import Control.Lens.Getter
 
 import Codec.Phaser.Core
 import Codec.Phaser.Common
@@ -355,7 +356,8 @@ expression = (withRegion $ infixExpression >>= \l -> case l of
 expressionR :: Phase Position Char o Expression
 expressionR =
   lambdaExpression <|>
-  caseExpression
+  caseExpression <|>
+  ifExpression
 
 -- Since we don't know operator precedence at parse time: we defer that step.
 infixExpression :: Phase Position Char o [Either Name Expression]
@@ -368,6 +370,18 @@ expression' = (withRegion $ (flip LiteralExpression) <$> literal) <|>
 
 listExpression :: Phase Position Char o Expression
 listExpression = withRegion $ flip ListExpression <$> listOf expression
+
+ifExpression :: Phase Position Char o Expression
+ifExpression = withRegion $ do
+  string "if"
+  munch1 isSpace
+  c <- expression
+  munch1 isSpace
+  string "then"
+  t <- block expression
+  string "else"
+  e <- block expression
+  return $ \r -> IfExpression r c t e
 
 pattern :: Phase Position Char o Pattern
 pattern = withRegion $ (\l r -> case l of
@@ -388,3 +402,29 @@ wildcardPattern = withRegion $ WildCardPattern <$ char '_'
 
 listPattern :: Phase Position Char o Pattern
 listPattern = withRegion $ flip ListPattern <$> listOf pattern
+
+type_ :: Phase Position Char o Type
+type_ = let
+  base = monotype <|> polytype
+  go t1 = return t1 <|> (do
+    munch isSpace
+    string "->"
+    munch isSpace
+    t2 <- base
+    go $ TyCon (sourceUnitEnds .~ (t2 ^. (sourceRegion . sourceUnitEnds)) $ t1 ^. sourceRegion) (GlobalName ["Prelude"] "->") [t1,t2]
+   )
+  in base >>= go
+
+monotype :: Phase Position Char o Type
+monotype = withRegion $ do
+  a <- name
+  return (\r -> TyCon r a []) <|> do
+    args <- sepBy typeArg (munch1 isSpace)
+    return (\r -> TyCon r a args)
+
+typeArg :: Phase Position Char o Type
+typeArg = (withRegion ((\n r -> TyCon r n []) <$> name)) <|>
+  (char '(' *> munch isSpace *> type_ <* munch isSpace <* char ')')
+
+polytype :: Phase Position Char o Type
+polytype = fail "polymorphic types not yet implemented"
