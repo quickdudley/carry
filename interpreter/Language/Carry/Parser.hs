@@ -1,14 +1,16 @@
 {-# LANGUAGE ApplicativeDo,RankNTypes,OverloadedStrings #-}
 -- Phaser runs faster with ApplicativeDo (or manually using "<*>" and friends)
 module Language.Carry.Parser (
-  moduleName
+  moduleName,
+  sourceFile
  ) where
 
 import Data.Bits
 import Data.Char
 import Data.List
-import Data.Void
 import qualified Data.Text as T
+import Data.Void
+import Data.Word
 
 import Control.Applicative
 import Control.Monad
@@ -17,6 +19,7 @@ import Control.Lens.Getter
 
 import Codec.Phaser.Core
 import Codec.Phaser.Common
+import Codec.Phaser.UTF8
 import Language.Carry.M
 
 moduleName :: Monoid p => Phase p Char o [T.Text]
@@ -436,3 +439,23 @@ typeArg = withRegion $
 
 polytype :: Phase Position Char o Type
 polytype = fail "polymorphic types not yet implemented"
+
+declaration :: Phase Position Char o Declaration
+declaration = fail "not implemented"
+
+sourceFile :: Automaton Position Word8 Declaration ()
+sourceFile = utf8_stream >>#
+  trackPosition >>#
+  stripComments >>#
+  loop
+ where
+  loop :: Phase Position Char Declaration ()
+  loop = (<|> eof) $ do
+    many blankLine
+    declaration >>= yield
+    many blankLine
+    loop
+  blankLine = get >>= \c -> case c of
+    '\n' -> return ()
+    _ | isSpace c -> blankLine
+      | otherwise -> fail "Not a blank line"
